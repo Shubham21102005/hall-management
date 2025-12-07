@@ -1,0 +1,32 @@
+# Dependency directories
+/node_modules
+
+# Build artifacts
+/dist
+/build
+/out
+.next/ # For Next.js projects
+.nuxt/ # For Nuxt.js projects
+
+# Log files
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# IDE and OS generated files
+.DS_Store
+.vscode/
+.idea/
+Thumbs.db
+
+# Test coverage
+/coverage
+
+# Other temporary files
+*.tmp
+*.bak
