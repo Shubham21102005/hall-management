@@ -126,8 +126,8 @@ exports.createHall = async (req, res) => {
 
     // Handle uploaded images
     let images = [];
-    if (req.files && req.files.length > 0) {
-      images = req.files.map(file => file.path);
+    if (req.cloudinaryUrls && req.cloudinaryUrls.length > 0) {
+      images = req.cloudinaryUrls;
     }
 
     // Parse facilities if it's a string
@@ -231,9 +231,8 @@ exports.updateHall = async (req, res) => {
     }
 
     // Handle new uploaded images
-    if (req.files && req.files.length > 0) {
-      const newImages = req.files.map(file => file.path);
-      updateData.images = [...(hall.images || []), ...newImages];
+    if (req.cloudinaryUrls && req.cloudinaryUrls.length > 0) {
+      updateData.images = [...(hall.images || []), ...req.cloudinaryUrls];
     }
 
     hall = await Hall.findByIdAndUpdate(

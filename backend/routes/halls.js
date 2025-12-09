@@ -12,7 +12,7 @@ const {
 const router = express.Router();
 
 const { protect, authorize } = require('../middleware/auth');
-const { upload } = require('../middleware/cloudinary');
+const { upload, uploadImages } = require('../middleware/cloudinary');
 
 // Public routes
 router.get('/', getHalls);
@@ -24,6 +24,7 @@ router.post(
   protect,
   authorize('admin'),
   upload.array('images', 5), // Allow up to 5 images
+  uploadImages, // Upload to Cloudinary
   createHall
 );
 
@@ -32,6 +33,7 @@ router.put(
   protect,
   authorize('admin'),
   upload.array('images', 5),
+  uploadImages, // Upload to Cloudinary
   updateHall
 );
 

@@ -1,6 +1,6 @@
 const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const { Readable } = require('stream');
 
 // Configure Cloudinary
 cloudinary.config({
@@ -9,15 +9,8 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-// Configure Multer storage for Cloudinary
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'hall-management/halls',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-    transformation: [{ width: 1200, height: 800, crop: 'limit' }]
-  }
-});
+// Use memory storage for multer
+const storage = multer.memoryStorage();
 
 // Multer upload middleware
 const upload = multer({
@@ -35,13 +28,59 @@ const upload = multer({
   }
 });
 
+// Upload buffer to Cloudinary
+const uploadToCloudinary = (buffer) => {
+  return new Promise((resolve, reject) => {
+    const uploadStream = cloudinary.uploader.upload_stream(
+      {
+        folder: 'hall-management/halls',
+        transformation: [{ width: 1200, height: 800, crop: 'limit' }]
+      },
+      (error, result) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(result);
+        }
+      }
+    );
+
+    const readableStream = Readable.from(buffer);
+    readableStream.pipe(uploadStream);
+  });
+};
+
+// Middleware to handle Cloudinary upload after multer
+const uploadImages = async (req, res, next) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return next();
+    }
+
+    const uploadPromises = req.files.map(file => uploadToCloudinary(file.buffer));
+    const results = await Promise.all(uploadPromises);
+    
+    // Store Cloudinary URLs in req.cloudinaryUrls
+    req.cloudinaryUrls = results.map(result => result.secure_url);
+    
+    next();
+  } catch (error) {
+    console.error('Cloudinary upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error uploading images to Cloudinary'
+    });
+  }
+};
+
 // Delete image from Cloudinary
 const deleteImage = async (imageUrl) => {
   try {
     // Extract public_id from URL
     const urlParts = imageUrl.split('/');
-    const filename = urlParts[urlParts.length - 1];
-    const publicId = `hall-management/halls/${filename.split('.')[0]}`;
+    const versionIndex = urlParts.findIndex(part => part.startsWith('v'));
+    const pathAfterVersion = urlParts.slice(versionIndex + 1);
+    const publicId = pathAfterVersion.join('/').split('.')[0];
     
     await cloudinary.uploader.destroy(publicId);
     return true;
@@ -66,6 +105,7 @@ const deleteImages = async (imageUrls) => {
 module.exports = {
   cloudinary,
   upload,
+  uploadImages,
   deleteImage,
   deleteImages
 };
